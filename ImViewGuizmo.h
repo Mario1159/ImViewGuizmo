@@ -157,7 +157,14 @@ namespace ImViewGuizmo
          0.0f,  0.0f, -0.01f,   0.0f,
          0.0f,  0.0f,  0.0f,    1.0f
     };
-   
+
+    enum ActiveTool {
+        TOOL_NONE,
+        TOOL_GIZMO,
+        TOOL_DOLLY,
+        TOOL_PAN
+    };
+
     struct Context {
         int hoveredAxisID = -1;
         bool isZoomButtonHovered = false;
@@ -217,14 +224,7 @@ namespace ImViewGuizmo
         float depth; // Screen-space depth
         vec3_t direction; // 3D vector
     };
-    
-    enum ActiveTool {
-        TOOL_NONE,
-        TOOL_GIZMO,
-        TOOL_DOLLY,
-        TOOL_PAN
-        };
-        
+            
     static float ImLengthSqr(const ImVec2& v) { return v.x * v.x + v.y * v.y; }
     static float mix(float a, float b, float t) { return a * (1.0f - t) + b * t; }
 
