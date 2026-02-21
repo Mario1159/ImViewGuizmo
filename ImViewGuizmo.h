@@ -31,6 +31,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ======================================================*/
 
+#include <imgui.h>
+
+#include <unordered_map>
+#include <cstdint>
+#include <array>
+#include <algorithm>
+#include <cmath>
+#include <cfloat>
+
 #ifndef IMVIEWGUIZMO_VEC3
     #define IMVIEWGUIZMO_USE_GLM_DEFAULTS
     #ifndef GLM_ENABLE_EXPERIMENTAL
@@ -91,6 +100,9 @@ namespace ImViewGuizmo
 #endif
     
     // INTERFACE
+
+    using ContextID = uint32_t;
+
     struct Style {
         float scale = 1.f;
         
@@ -145,27 +157,7 @@ namespace ImViewGuizmo
          0.0f,  0.0f, -0.01f,   0.0f,
          0.0f,  0.0f,  0.0f,    1.0f
     };
-    
-    inline Style& GetStyle() {
-        static Style style;
-        return style;
-    }
-    
-    // Gizmo Axis Struct
-    struct GizmoAxis {
-        int id; // 0-5 for (+X,-X,+Y,-Y,+Z,-Z), 6=center
-        int axisIndex; // 0=X, 1=Y, 2=Z
-        float depth; // Screen-space depth
-        vec3_t direction; // 3D vector
-    };
-    
-    enum ActiveTool {
-        TOOL_NONE,
-        TOOL_GIZMO,
-        TOOL_DOLLY,
-        TOOL_PAN
-        };
-    
+   
     struct Context {
         int hoveredAxisID = -1;
         bool isZoomButtonHovered = false;
@@ -191,20 +183,58 @@ namespace ImViewGuizmo
         }
     };
 
-    // Global context
-    inline Context& GetContext() {
-        static Context ctx;
-        return ctx;
+    inline std::unordered_map<ContextID, Context> g_contexts;
+    inline std::unordered_map<ContextID, Style> g_styles;
+    inline ContextID g_current_context = 0;
+   
+    inline Context& GetContextFor(ContextID id) {
+        return g_contexts[id];
     }
 
+    inline ContextID& CurrentContextID() {
+        return g_current_context;
+    }
+
+    inline Context& GetContext() {
+        return GetContextFor(CurrentContextID());
+    }
+
+    inline void SetContext(ContextID id) { CurrentContextID() = id; }
+    inline ContextID GetCurrentContext() { return CurrentContextID(); }
+    
+    inline Style& GetStyleFor(ContextID id) {
+        return g_styles[id];
+    }
+
+    inline Style& GetStyle() {
+        return GetStyleFor(GetCurrentContext());
+    }
+    
+    // Gizmo Axis Struct
+    struct GizmoAxis {
+        int id; // 0-5 for (+X,-X,+Y,-Y,+Z,-Z), 6=center
+        int axisIndex; // 0=X, 1=Y, 2=Z
+        float depth; // Screen-space depth
+        vec3_t direction; // 3D vector
+    };
+    
+    enum ActiveTool {
+        TOOL_NONE,
+        TOOL_GIZMO,
+        TOOL_DOLLY,
+        TOOL_PAN
+        };
+        
     static float ImLengthSqr(const ImVec2& v) { return v.x * v.x + v.y * v.y; }
     static float mix(float a, float b, float t) { return a * (1.0f - t) + b * t; }
 
     inline void BeginFrame() {
         static int lastFrame = -1;
         const int currentFrame = ImGui::GetFrameCount();
-        if (lastFrame != currentFrame)
-            lastFrame = currentFrame; GetContext().Reset();
+        if (lastFrame != currentFrame) {
+            lastFrame = currentFrame;
+            GetContext().Reset();
+        }
     }
     
     inline bool IsUsing() {
